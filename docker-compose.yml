@@ -1,0 +1,73 @@
+version: "3.7"
+services:
+  gateway:
+    build:
+      context: gateway/docker
+      dockerfile: development/nginx/Dockerfile
+    ports:
+      - "8081:8081"
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: api/docker
+      dockerfile: development/nginx/Dockerfile
+    volumes:
+      - ./api:/app
+    depends_on:
+      - api-php-fpm
+
+  api-php-fpm:
+    build:
+      context: api/docker
+      dockerfile: development/php-fpm/Dockerfile
+    environment:
+      APP_ENV: dev
+      HORIZON_PREFIX: app_bcode
+      DB_HOST: api-postgres
+      APP_DEBUG: 1
+      PHP_IDE_CONFIG: serverName=api
+    volumes:
+      - ./api:/app
+    depends_on:
+      - api-postgres
+      - api-redis
+
+  api-php-cli:
+    command: php artisan horizon
+    build:
+      context: api/docker
+      dockerfile: development/php-cli/Dockerfile
+    environment:
+      HORIZON_PREFIX: app_bcode
+      DB_HOST: api-postgres
+      APP_ENV: dev
+      APP_DEBUG: 1
+    volumes:
+      - ./api:/app
+    depends_on:
+      - api-postgres
+      - api-redis
+
+  api-redis:
+    platform: linux/x86_64
+    image: redis:3.0
+    ports:
+      - "63792:6379"
+
+  api-postgres:
+    image: postgres:13.3-alpine
+    environment:
+      DB_HOST: api-postgres
+      DB_PORT: 5432
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: Gm5JCdTu
+      POSTGRES_DB: app
+    volumes:
+      - api-postgres:/var/lib/postgresql/data
+    ports:
+      - "54322:5432"
+
+volumes:
+  api-postgres:
